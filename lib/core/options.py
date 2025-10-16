@@ -38,16 +38,17 @@ from lib.parse.nmap import parse_nmap
 def parse_options() -> dict[str, Any]:
     opt = merge_config(parse_arguments())
 
-    # Handle ELO list command early
-    if opt.elo_list:
-        from lib.core.elo import EloManager
-        elo_files = EloManager.list_elo_files(opt.elo_directory)
-        if elo_files:
-            print("ELO files found:")
-            for elo_file in elo_files:
-                print(f"  {elo_file}")
+    # Handle rating/ELO list command early (support both old and new flags)
+    if opt.ratings_list or opt.elo_list:
+        from lib.core.ratings import RatingManager
+        rating_dir = opt.ratings_directory or opt.elo_directory
+        rating_files = RatingManager.list_rating_files(rating_dir)
+        if rating_files:
+            print("Rating files found:")
+            for rating_file in rating_files:
+                print(f"  {rating_file}")
         else:
-            print(f"No ELO files found in: {opt.elo_directory}")
+            print(f"No rating files found in: {rating_dir}")
         exit(0)
 
     if opt.session_file:
@@ -406,15 +407,24 @@ def merge_config(opt: Values) -> Values:
     # Advanced
     opt.crawl = opt.crawl or config.safe_getboolean("advanced", "crawl")
 
-    # ELO
-    opt.elo_enabled = opt.elo_enabled or config.safe_getboolean("elo", "enabled")
-    opt.elo_directory = config.safe_get("elo", "elo-directory", ".")
-    opt.elo_initial = config.safe_getint("elo", "initial-elo", 1000)
-    opt.elo_hit_gain = config.safe_getint("elo", "hit-gain", 100)
-    opt.elo_miss_penalty = config.safe_getint("elo", "miss-penalty", 25)
-    opt.elo_time_decay_per_scan = config.safe_getfloat("elo", "time-decay-per-scan", 0.01)
-    opt.elo_suspicious_threshold = config.safe_getfloat("elo", "suspicious-threshold", 0.8)
-    opt.elo_rate_limit_threshold = config.safe_getint("elo", "rate-limit-threshold", 5)
+    # Ratings (Bayesian success rate system)
+    # Try new [ratings] section first, fall back to [elo] for backward compatibility
+    opt.ratings_enabled = opt.ratings_enabled or config.safe_getboolean("ratings", "enabled") or config.safe_getboolean("elo", "enabled")
+    opt.ratings_directory = config.safe_get("ratings", "ratings-directory") or config.safe_get("elo", "elo-directory", ".")
+    opt.prior_alpha = config.safe_getint("ratings", "prior-alpha", 5)
+    opt.prior_beta = config.safe_getint("ratings", "prior-beta", 95)
+    opt.confidence_level = config.safe_getfloat("ratings", "confidence-level", 0.95)
+    opt.time_decay_enabled = config.safe_getboolean("ratings", "time-decay-enabled", False)
+    opt.time_decay_rate = config.safe_getfloat("ratings", "time-decay-rate", 0.01)
+    opt.time_decay_threshold_days = config.safe_getint("ratings", "time-decay-threshold-days", 30)
+    opt.suspicious_threshold = config.safe_getfloat("ratings", "suspicious-threshold") or config.safe_getfloat("elo", "suspicious-threshold", 0.8)
+    opt.rate_limit_threshold = config.safe_getint("ratings", "rate-limit-threshold") or config.safe_getint("elo", "rate-limit-threshold", 5)
+    
+    # Backward compatibility: support old elo_* option names
+    opt.elo_enabled = opt.ratings_enabled
+    opt.elo_directory = opt.ratings_directory
+    opt.elo_suspicious_threshold = opt.suspicious_threshold
+    opt.elo_rate_limit_threshold = opt.rate_limit_threshold
 
     # View
     opt.full_url = opt.full_url or config.safe_getboolean("view", "full-url")

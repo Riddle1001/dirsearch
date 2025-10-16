@@ -484,25 +484,44 @@ def parse_arguments() -> Values:
         help="Crawl for new paths in responses"
     )
 
-    # ELO Settings
-    elo = OptionGroup(parser, "ELO Settings")
-    elo.add_option(
+    # Rating Settings (Bayesian success rate system)
+    ratings = OptionGroup(parser, "Rating Settings")
+    ratings.add_option(
+        "--ratings",
+        action="store_true",
+        dest="ratings_enabled",
+        help="Enable Bayesian success rate rating system for adaptive wordlist ranking"
+    )
+    ratings.add_option(
+        "--ratings-list",
+        action="store_true",
+        dest="ratings_list",
+        help="List all rating files with full paths and exit"
+    )
+    ratings.add_option(
+        "--ratings-reset",
+        action="store_true",
+        dest="ratings_reset",
+        help="Reset/clear rating file for the specified wordlist"
+    )
+    # Backward compatibility: deprecated --elo flags (use --ratings instead)
+    ratings.add_option(
         "--elo",
         action="store_true",
         dest="elo_enabled",
-        help="Enable ELO rating system for adaptive wordlist ranking"
+        help="[DEPRECATED] Use --ratings instead. Enable rating system for adaptive wordlist ranking"
     )
-    elo.add_option(
+    ratings.add_option(
         "--elo-list",
         action="store_true",
         dest="elo_list",
-        help="List all ELO files with full paths and exit"
+        help="[DEPRECATED] Use --ratings-list instead. List all rating files"
     )
-    elo.add_option(
+    ratings.add_option(
         "--elo-reset",
         action="store_true",
         dest="elo_reset",
-        help="Reset/clear ELO file for the specified wordlist"
+        help="[DEPRECATED] Use --ratings-reset instead. Reset/clear rating file"
     )
 
     # View Settings
@@ -571,7 +590,7 @@ def parse_arguments() -> Values:
     parser.add_option_group(request)
     parser.add_option_group(connection)
     parser.add_option_group(advanced)
-    parser.add_option_group(elo)
+    parser.add_option_group(ratings)
     parser.add_option_group(view)
     parser.add_option_group(output)
     options, _ = parser.parse_args()

@@ -135,10 +135,15 @@ class BaseFuzzer:
 
         return False
 
-    def _record_elo_result(self, path: str, status_code: int, is_hit: bool) -> None:
-        """Record ELO result if ELO is enabled"""
+    def _record_rating_result(self, path: str, status_code: int, is_hit: bool) -> None:
+        """Record rating result if rating system is enabled"""
         # This will be implemented by subclasses if needed
         pass
+    
+    # Backward compatibility alias
+    def _record_elo_result(self, path: str, status_code: int, is_hit: bool) -> None:
+        """[DEPRECATED] Use _record_rating_result instead"""
+        self._record_rating_result(path, status_code, is_hit)
 
 
 class Fuzzer(BaseFuzzer):
@@ -164,10 +169,16 @@ class Fuzzer(BaseFuzzer):
         self._quit_event = threading.Event()
         self._pause_semaphore = threading.Semaphore(0)
 
+    def _record_rating_result(self, word: str, status_code: int, is_hit: bool) -> None:
+        """Record rating result if rating system is enabled"""
+        # Support both old elo_enabled and new ratings_enabled
+        if (options.get("ratings_enabled") or options.get("elo_enabled")) and self._dictionary.ratings_manager:
+            self._dictionary.ratings_manager.record_result(word, status_code, is_hit)
+    
+    # Backward compatibility alias
     def _record_elo_result(self, word: str, status_code: int, is_hit: bool) -> None:
-        """Record ELO result if ELO is enabled"""
-        if options.get("elo_enabled") and self._dictionary.elo_manager:
-            self._dictionary.elo_manager.record_result(word, status_code, is_hit)
+        """[DEPRECATED] Use _record_rating_result instead"""
+        self._record_rating_result(word, status_code, is_hit)
 
     def setup_scanners(self) -> None:
         # Default scanners (wildcard testers)
@@ -282,9 +293,9 @@ class Fuzzer(BaseFuzzer):
                 for callback in self.match_callbacks:
                     callback(response)
         
-        # Record ELO result
+        # Record rating result
         if word:
-            self._record_elo_result(word, response.status, is_hit)
+            self._record_rating_result(word, response.status, is_hit)
 
     def thread_proc(self) -> None:
         logger.info(f'THREAD-{threading.get_ident()} started"')
@@ -333,10 +344,16 @@ class AsyncFuzzer(BaseFuzzer):
         self._play_event = asyncio.Event()
         self._background_tasks = set()
 
+    def _record_rating_result(self, word: str, status_code: int, is_hit: bool) -> None:
+        """Record rating result if rating system is enabled"""
+        # Support both old elo_enabled and new ratings_enabled
+        if (options.get("ratings_enabled") or options.get("elo_enabled")) and self._dictionary.ratings_manager:
+            self._dictionary.ratings_manager.record_result(word, status_code, is_hit)
+    
+    # Backward compatibility alias
     def _record_elo_result(self, word: str, status_code: int, is_hit: bool) -> None:
-        """Record ELO result if ELO is enabled"""
-        if options.get("elo_enabled") and self._dictionary.elo_manager:
-            self._dictionary.elo_manager.record_result(word, status_code, is_hit)
+        """[DEPRECATED] Use _record_rating_result instead"""
+        self._record_rating_result(word, status_code, is_hit)
 
     async def setup_scanners(self) -> None:
         # Default scanners (wildcard testers)
@@ -440,9 +457,9 @@ class AsyncFuzzer(BaseFuzzer):
                 for callback in self.match_callbacks:
                     callback(response)
         
-        # Record ELO result
+        # Record rating result
         if word:
-            self._record_elo_result(word, response.status, is_hit)
+            self._record_rating_result(word, response.status, is_hit)
 
     async def task_proc(self) -> None:
         async with self.sem:

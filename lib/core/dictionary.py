@@ -66,22 +66,26 @@ class Dictionary:
         self._extra_index = 0
         self._extra = []
         
-        # ELO integration
-        self.elo_manager = None
-        if options.get("elo_enabled") and kwargs.get("files"):
-            from lib.core.elo import EloManager
-            # Use the first wordlist file for ELO tracking
+        # Rating system integration (Bayesian success rate)
+        self.ratings_manager = None
+        # Support both old elo_enabled and new ratings_enabled
+        if (options.get("ratings_enabled") or options.get("elo_enabled")) and kwargs.get("files"):
+            from lib.core.ratings import RatingManager
+            # Use the first wordlist file for rating tracking
             wordlist_file = kwargs["files"][0]
-            self.elo_manager = EloManager(wordlist_file)
+            self.ratings_manager = RatingManager(wordlist_file)
             
-            # Handle --elo-reset flag
-            if options.get("elo_reset"):
-                self.elo_manager.reset()
-                print(f"ELO file reset: {self.elo_manager.elo_file_path}")
+            # Handle --ratings-reset or --elo-reset flag
+            if options.get("ratings_reset") or options.get("elo_reset"):
+                self.ratings_manager.reset()
+                print(f"Rating file reset: {self.ratings_manager.rating_file_path}")
                 exit(0)
             
-            # Sort wordlist by ELO scores
-            self._items = self.elo_manager.sort_wordlist(self._items)
+            # Sort wordlist by Wilson scores (highest first)
+            self._items = self.ratings_manager.sort_wordlist(self._items)
+        
+        # Backward compatibility alias
+        self.elo_manager = self.ratings_manager
 
     @property
     def index(self) -> int:

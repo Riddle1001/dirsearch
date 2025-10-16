@@ -1,43 +1,49 @@
 <img src="static/logo.png#gh-light-mode-only" alt="dirsearch logo (light)" width="675px">
 <img src="static/logo-dark.png#gh-dark-mode-only" alt="dirsearch logo (dark)" width="675px">
 
-# ⚡ ELO-Enhanced Branch
+# Bayesian Success Rate Branch
 
-> **This is a modified branch of dirsearch with an adaptive ELO rating system for intelligent wordlist prioritization.**
+> **This is a modified branch of dirsearch with an intelligent Bayesian rating system for adaptive wordlist prioritization using statistically sound probability estimation.**
 
 ### 🎯 New Features
 
-This branch adds a machine-learning-inspired ELO rating system that learns from your scans and automatically prioritizes words that are more likely to succeed:
+This branch adds a machine-learning-inspired **Bayesian Success Rate** system that learns from your scans and automatically prioritizes words based on their estimated discovery probability:
 
-- **📊 Adaptive Wordlist Ranking**: Words that successfully find paths get higher ELO scores and are tested earlier in future scans
+- **📊 Adaptive Wordlist Ranking**: Uses Wilson Score confidence intervals to rank words by estimated success probability
+- **🧮 Bayesian Priors**: Incorporates prior beliefs (default 5% success rate) to prevent overconfidence from sparse data
+- **📈 On-Demand Calculation**: Scores calculated dynamically from hits/misses, always reflecting current configuration
 - **🛡️ Smart Anomaly Detection**: Automatically detects suspicious behavior (rate limiting, wildcard responses, spam status codes)
 - **🔍 User-Controlled Review**: Review and selectively apply results from suspicious scans with an easy-to-read interface
-- **⏱️ Time Decay**: ELO scores gradually decay over time to adapt to changing targets
-- **💾 Persistent Learning**: ELO data is saved per-wordlist and persists across scans
-- **🎚️ Fully Configurable**: All ELO parameters (hit gain, miss penalty, decay rate, thresholds) are configurable
+- **⏱️ Time Decay**: Optional exponential decay for old observations to adapt to changing targets
+- **💾 Persistent Learning**: Rating data saved per-wordlist and persists across scans
+- **🎚️ Fully Configurable**: All parameters (priors, confidence level, decay rate, thresholds) are configurable
+- **✅ Backward Compatible**: Auto-migrates old ELO files, supports deprecated `--elo` flags
 
 ### 📋 TODO / Future Enhancements
 
-- **🧠 Semantic Word Reordering**: Add a flag that uses semantic analysis to intelligently reorder low-ELO words based on patterns from high-ELO words. For example, if words like "admin", "dashboard", and "panel" have high ELO scores, semantically similar words like "console", "control", "manage" (even with lower ELO) could be prioritized higher in the queue
+- **🧠 Semantic Word Reordering**: Add a flag that uses semantic analysis to intelligently reorder low-rating words based on patterns from high-rating words. For example, if words like "admin", "dashboard", and "panel" have high success rates, semantically similar words like "console", "control", "manage" (even with lower ratings) could be prioritized higher in the queue
 
-### 🚀 Quick Start with ELO
+### 🚀 Quick Start with Bayesian Ratings
 
 ```bash
-# Enable ELO mode
-python3 dirsearch.py -u https://example.com -e php,html,js --elo
+# Enable Bayesian ratings mode
+python3 dirsearch.py -u https://example.com -e php,html,js --ratings
 
-# List all ELO files
-python3 dirsearch.py --elo-list
+# List all rating files
+python3 dirsearch.py --ratings-list
 
-# Reset ELO data for a wordlist
-python3 dirsearch.py -w wordlist.txt --elo-reset
+# Reset rating data for a wordlist
+python3 dirsearch.py -w wordlist.txt --ratings-reset
 ```
 
-See the [ELO Configuration](#elo-configuration) section below for detailed usage and configuration options.
+See the [Bayesian Ratings Configuration](#bayesian-ratings-configuration) section below for detailed usage and configuration options.
 
 ---
 
 # dirsearch - Web path discovery
+
+<img src="static/logo.png#gh-light-mode-only" alt="dirsearch logo (light)" width="675px">
+<img src="static/logo-dark.png#gh-dark-mode-only" alt="dirsearch logo (dark)" width="675px">
 
 ![Build](https://img.shields.io/badge/Built%20with-Python-Blue)
 ![License](https://img.shields.io/badge/license-GNU_General_Public_License-_red.svg)
@@ -59,7 +65,7 @@ _Reach to our [Discord server](https://discord.gg/2N22ZdAJRj) to communicate wit
 - [Wordlists](#wordlists-important)
 - [Options](#options)
 - [Configuration](#configuration)
-- [ELO Configuration](#elo-configuration)
+- [Bayesian Ratings Configuration](#bayesian-ratings-configuration)
 - [How to use](#how-to-use)
   - [Simple usage](#simple-usage)
   - [Pausing progress](#pausing-progress)
@@ -300,6 +306,18 @@ Options:
   Advanced Settings:
     --crawl             Crawl for new paths in responses
 
+  Rating Settings:
+    --ratings           Enable Bayesian success rate rating system for adaptive
+                        wordlist ranking
+    --ratings-list      List all rating files with full paths and exit
+    --ratings-reset     Reset/clear rating file for the specified wordlist
+    --elo               [DEPRECATED] Use --ratings instead. Enable rating system
+                        for adaptive wordlist ranking
+    --elo-list          [DEPRECATED] Use --ratings-list instead. List all rating
+                        files
+    --elo-reset         [DEPRECATED] Use --ratings-reset instead. Reset/clear
+                        rating file
+
   View Settings:
     --full-url          Full URLs in the output (enabled automatically in
                         quiet mode)
@@ -382,19 +400,30 @@ max-retries = 1
 [advanced]
 crawl = False
 
+[ratings]
+# Enable Bayesian success rate rating system for adaptive wordlist ranking
+enabled = True
+# Directory to store rating files (supports %temp_folder%)
+ratings-directory = .
+# Bayesian priors: alpha (pseudo-hits) and beta (pseudo-misses)
+# Default: 5% prior success rate (5 hits, 95 misses)
+# Adjust based on expected hit rate: e.g., 10% = (10, 90), 1% = (1, 99)
+prior-alpha = 5
+prior-beta = 95
+# Wilson score confidence level (0.95 = 95% confidence interval)
+confidence-level = 0.95
+# Time decay settings
+time-decay-enabled = False
+time-decay-rate = 0.01
+time-decay-threshold-days = 30
+# Suspicious scan detection thresholds
+suspicious-threshold = 0.8
+rate-limit-threshold = 5
+
+# Backward compatibility: [elo] section (deprecated, use [ratings] instead)
 [elo]
 enabled = False
-# Directory to store ELO files. Supports: %temp_folder%, relative paths (default: .), or absolute paths
 elo-directory = .
-initial-elo = 1000
-hit-gain = 100
-miss-penalty = 25
-# Time decay per scan (0.01 = 1% decay towards initial ELO)
-time-decay-per-scan = 0.01
-# Threshold for detecting suspicious scans (0.8 = 80% same status code)
-suspicious-threshold = 0.8
-# Number of 429 responses before flagging as rate limited
-rate-limit-threshold = 5
 
 [view]
 full-url = False
@@ -411,34 +440,38 @@ autosave-report-folder = reports/
 # log-file-size = 50000000
 ```
 
-## ELO Configuration
+## Bayesian Ratings Configuration
 
-The ELO rating system learns from your scans to prioritize words that are more likely to find valid paths.
+The Bayesian Success Rate system learns from your scans to prioritize words based on their estimated discovery probability using statistically sound probability estimation.
 
 ### How It Works
 
-1. **Initial State**: All words start with the same ELO score (default: 1000)
-2. **Hit Reward**: When a word finds a valid path, its ELO increases (default: +100)
-3. **Miss Penalty**: When a word doesn't find anything, its ELO decreases (default: -25)
-4. **Time Decay**: ELO scores gradually decay towards the initial value between scans (default: 1% per scan)
-5. **Priority Sorting**: Words with higher ELO scores are tested first in future scans
+1. **Raw Observations**: Only hits and misses are stored in rating files
+2. **Bayesian Prior**: Default 5% prior belief prevents overconfidence from sparse data
+3. **On-Demand Calculation**: Scores calculated dynamically from current configuration
+4. **Wilson Score Ranking**: Conservative lower bound for ranking (calculated on posterior)
+5. **Time Decay**: Optional exponential decay for old observations
+6. **Priority Sorting**: Words with higher Wilson scores tested first
 
 ### Command-Line Flags
 
 ```bash
-# Enable ELO mode for a scan
-python3 dirsearch.py -u https://example.com -e php --elo
+# Enable Bayesian ratings
+python3 dirsearch.py -u https://example.com -e php --ratings
 
-# List all ELO files with full paths
-python3 dirsearch.py --elo-list
+# List all rating files
+python3 dirsearch.py --ratings-list
 
-# Reset ELO data for a specific wordlist
-python3 dirsearch.py -w /path/to/wordlist.txt --elo-reset
+# Reset rating data for a wordlist
+python3 dirsearch.py -w wordlist.txt --ratings-reset
+
+# Backward compatible (deprecated)
+python3 dirsearch.py -u https://example.com --elo
 ```
 
 ### Suspicious Scan Detection
 
-The ELO system automatically detects suspicious behavior to prevent corrupting your ELO data:
+The rating system automatically detects suspicious behavior to prevent corrupting your rating data:
 
 - **Rate Limiting**: Detects when the server returns multiple 429 (Too Many Requests) responses
 - **Dominant Status Code**: Detects when >80% of responses have the same status code (could be any code: 200, 403, 404, 500, etc.)
@@ -449,7 +482,7 @@ When suspicious behavior is detected, results are marked for review. On your nex
 ⚠️  Suspicious scan detected (scan-a1b2c3d4, 2025-10-16 12:00:00)
 Reason: 99% responses with status 403
 
-Possible spam (403):     327 words  [would update ELO]
+Possible spam (403):     327 words  [would update ratings]
 Possible legit:            3 words  [200: admin, login | 301: api]
 
 [k]eep possible legit only (default) / [a]ccept all / [d]iscard all:
@@ -457,50 +490,60 @@ Possible legit:            3 words  [200: admin, login | 301: api]
 
 This allows you to:
 
-- **Keep legitimate only** (k): Only apply ELO changes for words with non-spam status codes (recommended)
-- **Accept all** (a): Apply all ELO changes including the spam
+- **Keep legitimate only** (k): Only apply rating changes for words with non-spam status codes (recommended)
+- **Accept all** (a): Apply all rating changes including the spam
 - **Discard all** (d): Discard all changes from this scan
 
 ### Configuration Options
 
-All ELO parameters can be configured in `config.ini`:
+All rating parameters can be configured in `config.ini`:
 
 ```ini
-[elo]
-enabled = False              # Enable ELO by default
-elo-directory = .            # Where to store ELO files (. = current directory, %temp_folder% = OS temp)
-initial-elo = 1000          # Starting ELO score for new words
-hit-gain = 100              # ELO points gained on successful hit
-miss-penalty = 25           # ELO points lost on miss
-time-decay-per-scan = 0.01  # Decay rate per scan (0.01 = 1%)
-suspicious-threshold = 0.8  # Threshold for flagging suspicious scans (0.8 = 80%)
-rate-limit-threshold = 5    # Number of 429s before flagging as rate limited
+[ratings]
+enabled = True                    # Enable ratings by default
+ratings-directory = .             # Where to store rating files (. = current directory, %temp_folder% = OS temp)
+prior-alpha = 5                  # Bayesian prior: pseudo-hits (for 5% expected rate)
+prior-beta = 95                  # Bayesian prior: pseudo-misses
+confidence-level = 0.95          # Wilson score confidence level (0.95 = 95%)
+time-decay-enabled = False       # Enable time decay for old observations
+time-decay-rate = 0.01           # Decay rate (0.01 = 1% per month)
+time-decay-threshold-days = 30   # Days before decay starts
+suspicious-threshold = 0.8       # Threshold for flagging suspicious scans (0.8 = 80%)
+rate-limit-threshold = 5         # Number of 429s before flagging as rate limited
 ```
 
-### ELO File Format
+### Rating File Format
 
-ELO data is stored in JSON format alongside your wordlist:
+Rating data is stored in JSON format alongside your wordlist (`.elo.json` for backward compatibility):
 
 ```json
 {
   "metadata": {
+    "version": 2,
     "total_scans": 10,
     "last_scan": "2025-10-16T12:00:00"
   },
+  "priors": {
+    "alpha": 5,
+    "beta": 95
+  },
   "words": {
-    "admin": { "elo": 1250, "hits": 5, "misses": 2 },
-    "login": { "elo": 1180, "hits": 3, "misses": 1 },
-    "backup": { "elo": 980, "hits": 0, "misses": 1 }
+    "admin": { "hits": 15, "misses": 85 },
+    "login": { "hits": 20, "misses": 80 },
+    "backup": { "hits": 0, "misses": 1 }
   }
 }
 ```
 
+**Important**: Only raw hits/misses are stored. Scores are calculated on-demand using current configuration, ensuring they're always up-to-date.
+
 ### Use Cases
 
-- **Faster Scans**: High-value words are tested first, finding results earlier
+- **Faster Scans**: High-probability words tested first, finding results earlier
 - **Target Adaptation**: System learns which words work for your specific targets
-- **Multi-Target Efficiency**: If you scan similar targets, the ELO file becomes increasingly optimized
+- **Multi-Target Efficiency**: If you scan similar targets, the rating file becomes increasingly optimized
 - **Bug Bounty Workflows**: Build up optimized wordlists over time for specific technologies or frameworks
+- **Statistical Soundness**: Wilson scores provide conservative lower bounds, preventing overconfidence from lucky hits
 
 ## How to use
 

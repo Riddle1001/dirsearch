@@ -292,8 +292,8 @@ class Controller:
                 self.jobs_processed += 1
                 self.old_session = False
                 
-                # Finalize ELO data after each directory scan
-                self._finalize_elo_scan()
+                # Finalize rating data after each directory scan
+                self._finalize_ratings_scan()
 
     async def start_coroutines(self, start_time: float) -> None:
         task = self.loop.create_task(self.fuzzer.start())
@@ -583,10 +583,10 @@ class Controller:
 
     def _handle_pending_elo_review(self) -> None:
         """Handle pending ELO review if it exists"""
-        if not self.dictionary.elo_manager.has_pending_review():
+        if not self.dictionary.ratings_manager.has_pending_review():
             return
         
-        summary = self.dictionary.elo_manager.get_pending_review_summary()
+        summary = self.dictionary.ratings_manager.get_pending_review_summary()
         
         # Display the pending review summary
         interface.warning("\n⚠️  Suspicious scan detected")
@@ -612,19 +612,25 @@ class Controller:
             choice = input().lower() or "k"
             
             if choice in ["k", "a", "d"]:
-                self.dictionary.elo_manager.apply_pending_review(choice)
+                self.dictionary.ratings_manager.apply_pending_review(choice)
                 
                 if choice == "a":
-                    print("Applied all changes to ELO file.")
+                    print("Applied all changes to rating file.")
                 elif choice == "k":
-                    print("Applied only possible legitimate changes to ELO file.")
+                    print("Applied only possible legitimate changes to rating file.")
                 elif choice == "d":
                     print("Discarded all changes.")
                 break
             else:
                 print("Invalid choice. Please enter 'k', 'a', or 'd'.")
 
+    def _finalize_ratings_scan(self) -> None:
+        """Finalize rating data after a scan completes"""
+        # Support both old elo_enabled and new ratings_enabled
+        if (options.get("ratings_enabled") or options.get("elo_enabled")) and self.dictionary.ratings_manager:
+            self.dictionary.ratings_manager.finalize_scan()
+    
+    # Backward compatibility alias
     def _finalize_elo_scan(self) -> None:
-        """Finalize ELO data after a scan completes"""
-        if options.get("elo_enabled") and self.dictionary.elo_manager:
-            self.dictionary.elo_manager.finalize_scan()
+        """[DEPRECATED] Use _finalize_ratings_scan instead"""
+        self._finalize_ratings_scan()
