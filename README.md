@@ -16,6 +16,10 @@ This branch adds a machine-learning-inspired ELO rating system that learns from 
 - **💾 Persistent Learning**: ELO data is saved per-wordlist and persists across scans
 - **🎚️ Fully Configurable**: All ELO parameters (hit gain, miss penalty, decay rate, thresholds) are configurable
 
+### 📋 TODO / Future Enhancements
+
+- **🧠 Semantic Word Reordering**: Add a flag that uses semantic analysis to intelligently reorder low-ELO words based on patterns from high-ELO words. For example, if words like "admin", "dashboard", and "panel" have high ELO scores, semantically similar words like "console", "control", "manage" (even with lower ELO) could be prioritized higher in the queue
+
 ### 🚀 Quick Start with ELO
 
 ```bash
