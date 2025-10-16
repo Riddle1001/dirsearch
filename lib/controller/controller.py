@@ -126,6 +126,11 @@ class Controller:
             options["headers"] = {**DEFAULT_HEADERS, **options["headers"]}
 
         self.dictionary = Dictionary(files=options["wordlists"])
+        
+        # Handle pending ELO review if it exists
+        if options.get("elo_enabled") and self.dictionary.elo_manager:
+            self._handle_pending_elo_review()
+        
         self.start_time = time.time()
         self.passed_urls: set[str] = set()
         self.directories: list[str] = []
@@ -286,6 +291,9 @@ class Controller:
 
                 self.jobs_processed += 1
                 self.old_session = False
+                
+                # Finalize ELO data after each directory scan
+                self._finalize_elo_scan()
 
     async def start_coroutines(self, start_time: float) -> None:
         task = self.loop.create_task(self.fuzzer.start())
@@ -572,3 +580,51 @@ class Controller:
             return self.recur(redirect_path)
 
         return []
+
+    def _handle_pending_elo_review(self) -> None:
+        """Handle pending ELO review if it exists"""
+        if not self.dictionary.elo_manager.has_pending_review():
+            return
+        
+        summary = self.dictionary.elo_manager.get_pending_review_summary()
+        
+        # Display the pending review summary
+        interface.warning("\n⚠️  Suspicious scan detected")
+        print(f"Scan ID: {summary['scan_id']}, Time: {summary['timestamp']}")
+        print(f"Reason: {summary['reason']}\n")
+        
+        print(f"Possible spam ({summary['dominant_status']}):  {summary['spam_count']:>4} words  [would update ELO]")
+        
+        # Display legitimate samples
+        legit_display = []
+        for status, words in summary['legit_samples'].items():
+            sample_words = ", ".join(words[:3])
+            if len(words) > 3:
+                sample_words += "..."
+            legit_display.append(f"{status}: {sample_words}")
+        
+        legit_str = " | ".join(legit_display) if legit_display else "none"
+        print(f"Possible legit:          {summary['legit_count']:>4} words  [{legit_str}]\n")
+        
+        # Prompt user for action
+        while True:
+            interface.in_line("[k]eep possible legit only (default) / [a]ccept all / [d]iscard all: ")
+            choice = input().lower() or "k"
+            
+            if choice in ["k", "a", "d"]:
+                self.dictionary.elo_manager.apply_pending_review(choice)
+                
+                if choice == "a":
+                    print("Applied all changes to ELO file.")
+                elif choice == "k":
+                    print("Applied only possible legitimate changes to ELO file.")
+                elif choice == "d":
+                    print("Discarded all changes.")
+                break
+            else:
+                print("Invalid choice. Please enter 'k', 'a', or 'd'.")
+
+    def _finalize_elo_scan(self) -> None:
+        """Finalize ELO data after a scan completes"""
+        if options.get("elo_enabled") and self.dictionary.elo_manager:
+            self.dictionary.elo_manager.finalize_scan()

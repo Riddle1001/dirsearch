@@ -1,8 +1,39 @@
 <img src="static/logo.png#gh-light-mode-only" alt="dirsearch logo (light)" width="675px">
 <img src="static/logo-dark.png#gh-dark-mode-only" alt="dirsearch logo (dark)" width="675px">
 
-dirsearch - Web path discovery
-=========
+# ⚡ ELO-Enhanced Branch
+
+> **This is a modified branch of dirsearch with an adaptive ELO rating system for intelligent wordlist prioritization.**
+
+### 🎯 New Features
+
+This branch adds a machine-learning-inspired ELO rating system that learns from your scans and automatically prioritizes words that are more likely to succeed:
+
+- **📊 Adaptive Wordlist Ranking**: Words that successfully find paths get higher ELO scores and are tested earlier in future scans
+- **🛡️ Smart Anomaly Detection**: Automatically detects suspicious behavior (rate limiting, wildcard responses, spam status codes)
+- **🔍 User-Controlled Review**: Review and selectively apply results from suspicious scans with an easy-to-read interface
+- **⏱️ Time Decay**: ELO scores gradually decay over time to adapt to changing targets
+- **💾 Persistent Learning**: ELO data is saved per-wordlist and persists across scans
+- **🎚️ Fully Configurable**: All ELO parameters (hit gain, miss penalty, decay rate, thresholds) are configurable
+
+### 🚀 Quick Start with ELO
+
+```bash
+# Enable ELO mode
+python3 dirsearch.py -u https://example.com -e php,html,js --elo
+
+# List all ELO files
+python3 dirsearch.py --elo-list
+
+# Reset ELO data for a wordlist
+python3 dirsearch.py -w wordlist.txt --elo-reset
+```
+
+See the [ELO Configuration](#elo-configuration) section below for detailed usage and configuration options.
+
+---
+
+# dirsearch - Web path discovery
 
 ![Build](https://img.shields.io/badge/Built%20with-Python-Blue)
 ![License](https://img.shields.io/badge/license-GNU_General_Public_License-_red.svg)
@@ -12,48 +43,45 @@ dirsearch - Web path discovery
 [![Discord](https://img.shields.io/discord/992276296669339678.svg?logo=discord)](https://discord.gg/2N22ZdAJRj)
 [![Twitter](https://img.shields.io/twitter/follow/_dirsearch?label=Follow)](https://twitter.com/_dirsearch)
 
-
 > An advanced web path brute-forcer
 
 **dirsearch** is being actively developed by [@maurosoria](https://twitter.com/_maurosoria) and [@shelld3v](https://twitter.com/shells3c_)
 
-*Reach to our [Discord server](https://discord.gg/2N22ZdAJRj) to communicate with the team at best*
+_Reach to our [Discord server](https://discord.gg/2N22ZdAJRj) to communicate with the team at best_
 
+## Table of Contents
 
-Table of Contents
-------------
-* [Installation](#installation--usage)
-* [Wordlists](#wordlists-important)
-* [Options](#options)
-* [Configuration](#configuration)
-* [How to use](#how-to-use)
-  * [Simple usage](#simple-usage)
-  * [Pausing progress](#pausing-progress)
-  * [Recursion](#recursion)
-  * [Threads](#threads)
-  * [Asynchronous](#asynchronous)
-  * [Prefixes / Suffixes](#prefixes--suffixes)
-  * [Blacklist](#blacklist)
-  * [Filters](#filters)
-  * [Raw request](#raw-request)
-  * [Wordlist formats](#wordlist-formats)
-  * [Exclude extensions](#exclude-extensions)
-  * [Scan sub-directories](#scan-sub-directories)
-  * [Proxies](#proxies)
-  * [Reports](#reports)
-  * [More example commands](#more-example-commands)
-* [Support Docker](#support-docker)
-  * [Install Docker Linux](#install-docker-linux)
-  * [Build Image dirsearch](#build-image-dirsearch)
-  * [Using dirsearch](#using-dirsearch)
-* [References](#references)
-* [Tips](#tips)
-* [Contribution](#contribution)
-* [License](#license)
+- [Installation](#installation--usage)
+- [Wordlists](#wordlists-important)
+- [Options](#options)
+- [Configuration](#configuration)
+- [ELO Configuration](#elo-configuration)
+- [How to use](#how-to-use)
+  - [Simple usage](#simple-usage)
+  - [Pausing progress](#pausing-progress)
+  - [Recursion](#recursion)
+  - [Threads](#threads)
+  - [Asynchronous](#asynchronous)
+  - [Prefixes / Suffixes](#prefixes--suffixes)
+  - [Blacklist](#blacklist)
+  - [Filters](#filters)
+  - [Raw request](#raw-request)
+  - [Wordlist formats](#wordlist-formats)
+  - [Exclude extensions](#exclude-extensions)
+  - [Scan sub-directories](#scan-sub-directories)
+  - [Proxies](#proxies)
+  - [Reports](#reports)
+  - [More example commands](#more-example-commands)
+- [Support Docker](#support-docker)
+  - [Install Docker Linux](#install-docker-linux)
+  - [Build Image dirsearch](#build-image-dirsearch)
+  - [Using dirsearch](#using-dirsearch)
+- [References](#references)
+- [Tips](#tips)
+- [Contribution](#contribution)
+- [License](#license)
 
-
-Installation & Usage
-------------
+## Installation & Usage
 
 **Requirement: python 3.9 or higher**
 
@@ -65,19 +93,20 @@ Choose one of these installation options:
 - Install with PyPi: `pip3 install dirsearch` or `pip install dirsearch`
 - Install with Kali Linux: `sudo apt-get install dirsearch` (deprecated)
 
+## Wordlists (IMPORTANT)
 
-Wordlists (IMPORTANT)
----------------
 **Summary:**
-  - Wordlist is a text file, each line is a path.
-  - About extensions, unlike other tools, dirsearch only replaces the `%EXT%` keyword with extensions from **-e** flag.
-  - For wordlists without `%EXT%` (like [SecLists](https://github.com/danielmiessler/SecLists)), **-f | --force-extensions** switch is required to append extensions to every word in wordlist, as well as the `/`.
-  - To apply your extensions to wordlist entries that have extensions already, use **-O** | **--overwrite-extensions** (Note: some extensions are excluded from being overwritted such as *.log*, *.json*, *.xml*, ... or media extensions like *.jpg*, *.png*)
-  - To use multiple wordlists, you can separate your wordlists with commas. Example: `wordlist1.txt,wordlist2.txt`.
+
+- Wordlist is a text file, each line is a path.
+- About extensions, unlike other tools, dirsearch only replaces the `%EXT%` keyword with extensions from **-e** flag.
+- For wordlists without `%EXT%` (like [SecLists](https://github.com/danielmiessler/SecLists)), **-f | --force-extensions** switch is required to append extensions to every word in wordlist, as well as the `/`.
+- To apply your extensions to wordlist entries that have extensions already, use **-O** | **--overwrite-extensions** (Note: some extensions are excluded from being overwritted such as _.log_, _.json_, _.xml_, ... or media extensions like _.jpg_, _.png_)
+- To use multiple wordlists, you can separate your wordlists with commas. Example: `wordlist1.txt,wordlist2.txt`.
 
 **Examples:**
 
-- *Normal extensions*:
+- _Normal extensions_:
+
 ```
 index.%EXT%
 ```
@@ -90,7 +119,8 @@ index.asp
 index.aspx
 ```
 
-- *Force extensions*:
+- _Force extensions_:
+
 ```
 admin
 ```
@@ -104,7 +134,8 @@ admin.html
 admin/
 ```
 
-- *Overwrite extensions*:
+- _Overwrite extensions_:
+
 ```
 login.html
 ```
@@ -117,9 +148,7 @@ login.jsp
 login.jspa
 ```
 
-
-Options
--------
+## Options
 
 ```
 Usage: dirsearch.py [-u|--url] target [-e|--extensions] extensions [options]
@@ -285,9 +314,7 @@ Options:
     --log=PATH          Log file
 ```
 
-
-Configuration
----------------
+## Configuration
 
 By default, `config.ini` inside your dirsearch directory is used as the configuration file but you can select another file via `--config` flag or `DIRSEARCH_CONFIG` environment variable.
 
@@ -351,6 +378,20 @@ max-retries = 1
 [advanced]
 crawl = False
 
+[elo]
+enabled = False
+# Directory to store ELO files. Supports: %temp_folder%, relative paths (default: .), or absolute paths
+elo-directory = .
+initial-elo = 1000
+hit-gain = 100
+miss-penalty = 25
+# Time decay per scan (0.01 = 1% decay towards initial ELO)
+time-decay-per-scan = 0.01
+# Threshold for detecting suspicious scans (0.8 = 80% same status code)
+suspicious-threshold = 0.8
+# Number of 429 responses before flagging as rate limited
+rate-limit-threshold = 5
+
 [view]
 full-url = False
 quiet-mode = False
@@ -366,15 +407,105 @@ autosave-report-folder = reports/
 # log-file-size = 50000000
 ```
 
+## ELO Configuration
 
-How to use
----------------
+The ELO rating system learns from your scans to prioritize words that are more likely to find valid paths.
+
+### How It Works
+
+1. **Initial State**: All words start with the same ELO score (default: 1000)
+2. **Hit Reward**: When a word finds a valid path, its ELO increases (default: +100)
+3. **Miss Penalty**: When a word doesn't find anything, its ELO decreases (default: -25)
+4. **Time Decay**: ELO scores gradually decay towards the initial value between scans (default: 1% per scan)
+5. **Priority Sorting**: Words with higher ELO scores are tested first in future scans
+
+### Command-Line Flags
+
+```bash
+# Enable ELO mode for a scan
+python3 dirsearch.py -u https://example.com -e php --elo
+
+# List all ELO files with full paths
+python3 dirsearch.py --elo-list
+
+# Reset ELO data for a specific wordlist
+python3 dirsearch.py -w /path/to/wordlist.txt --elo-reset
+```
+
+### Suspicious Scan Detection
+
+The ELO system automatically detects suspicious behavior to prevent corrupting your ELO data:
+
+- **Rate Limiting**: Detects when the server returns multiple 429 (Too Many Requests) responses
+- **Dominant Status Code**: Detects when >80% of responses have the same status code (could be any code: 200, 403, 404, 500, etc.)
+
+When suspicious behavior is detected, results are marked for review. On your next scan, you'll see:
+
+```
+⚠️  Suspicious scan detected (scan-a1b2c3d4, 2025-10-16 12:00:00)
+Reason: 99% responses with status 403
+
+Possible spam (403):     327 words  [would update ELO]
+Possible legit:            3 words  [200: admin, login | 301: api]
+
+[k]eep possible legit only (default) / [a]ccept all / [d]iscard all:
+```
+
+This allows you to:
+
+- **Keep legitimate only** (k): Only apply ELO changes for words with non-spam status codes (recommended)
+- **Accept all** (a): Apply all ELO changes including the spam
+- **Discard all** (d): Discard all changes from this scan
+
+### Configuration Options
+
+All ELO parameters can be configured in `config.ini`:
+
+```ini
+[elo]
+enabled = False              # Enable ELO by default
+elo-directory = .            # Where to store ELO files (. = current directory, %temp_folder% = OS temp)
+initial-elo = 1000          # Starting ELO score for new words
+hit-gain = 100              # ELO points gained on successful hit
+miss-penalty = 25           # ELO points lost on miss
+time-decay-per-scan = 0.01  # Decay rate per scan (0.01 = 1%)
+suspicious-threshold = 0.8  # Threshold for flagging suspicious scans (0.8 = 80%)
+rate-limit-threshold = 5    # Number of 429s before flagging as rate limited
+```
+
+### ELO File Format
+
+ELO data is stored in JSON format alongside your wordlist:
+
+```json
+{
+  "metadata": {
+    "total_scans": 10,
+    "last_scan": "2025-10-16T12:00:00"
+  },
+  "words": {
+    "admin": { "elo": 1250, "hits": 5, "misses": 2 },
+    "login": { "elo": 1180, "hits": 3, "misses": 1 },
+    "backup": { "elo": 980, "hits": 0, "misses": 1 }
+  }
+}
+```
+
+### Use Cases
+
+- **Faster Scans**: High-value words are tested first, finding results earlier
+- **Target Adaptation**: System learns which words work for your specific targets
+- **Multi-Target Efficiency**: If you scan similar targets, the ELO file becomes increasingly optimized
+- **Bug Bounty Workflows**: Build up optimized wordlists over time for specific technologies or frameworks
+
+## How to use
 
 [![Dirsearch demo](https://asciinema.org/a/380112.svg)](https://asciinema.org/a/380112)
 
 Some examples for how to use dirsearch - those are the most common arguments. If you need all, just use the **-h** argument.
 
 ### Simple usage
+
 ```
 python3 dirsearch.py -u https://target
 ```
@@ -388,24 +519,31 @@ python3 dirsearch.py -e php,html,js -u https://target -w /path/to/wordlist
 ```
 
 ---
+
 ### Pausing progress
+
 dirsearch allows you to pause the scanning progress with CTRL+C, from here, you can save the progress (and continue later), skip the current target, or skip the current sub-directory.
 
 <img src="static/pause.png" alt="Pausing dirsearch" width="475px">
 
-----
+---
+
 ### Recursion
+
 - Recursive brute-force is brute-forcing continuously the after of found directories. For example, if dirsearch finds `admin/`, it will brute-force `admin/*` (`*` is where it brute forces). To enable this feature, use **-r** (or **--recursive**) flag
 
 ```
 python3 dirsearch.py -e php,html,js -u https://target -r
 ```
+
 - You can set the max recursion depth with **--max-recursion-depth**, and status codes to recurse with **--recursion-status**
 
 ```
 python3 dirsearch.py -e php,html,js -u https://target -r --max-recursion-depth 3 --recursion-status 200-399
 ```
+
 - There are 2 more options: **--force-recursive** and **--deep-recursive**
+
   - **Force recursive**: Brute force recursively all found paths, not just paths end with `/`
   - **Deep recursive**: Recursive brute-force all depths of a path (`a/b/c` => add `a/`, `a/b/`)
 
@@ -415,8 +553,10 @@ python3 dirsearch.py -e php,html,js -u https://target -r --max-recursion-depth 3
 python3 dirsearch.py -e php,html,js -u https://target -r --exclude-subdirs image/,media/,css/
 ```
 
-----
+---
+
 ### Threads
+
 The thread number (**-t | --threads**) reflects the number of separated brute force processes. And so the bigger the thread number is, the faster dirsearch runs. By default, the number of threads is 25, but you can increase it if you want to speed up the progress.
 
 In spite of that, the speed still depends a lot on the response time of the server. And as a warning, we advise you to keep the threads number not too big because it can cause DoS (Denial of Service).
@@ -425,24 +565,30 @@ In spite of that, the speed still depends a lot on the response time of the serv
 python3 dirsearch.py -e php,htm,js,bak,zip,tgz,txt -u https://target -t 20
 ```
 
-----
+---
+
 ### Asynchronous
+
 You can switch to asynchronous mode by `--async`, let dirsearch use coroutines instead of threads to handle concurrent requests.
 
 In theory, asynchronous mode offers better performance and lower CPU usage since it doesn't require switching between different thread contexts. Additionally, pressing CTRL+C will immediately pause progress without needing to wait for threads to suspend.
 
-----
+---
+
 ### Prefixes / Suffixes
+
 - **--prefixes**: Add custom prefixes to all entries
 
 ```
 python3 dirsearch.py -e php -u https://target --prefixes .,admin,_
 ```
+
 Wordlist:
 
 ```
 tools
 ```
+
 Generated with prefixes:
 
 ```
@@ -457,12 +603,14 @@ _tools
 ```
 python3 dirsearch.py -e php -u https://target --suffixes ~
 ```
+
 Wordlist:
 
 ```
 index.php
 internal
 ```
+
 Generated with suffixes:
 
 ```
@@ -472,14 +620,18 @@ index.php~
 internal~
 ```
 
-----
+---
+
 ### Blacklist
+
 Inside the `db/` folder, there are several "blacklist files". Paths in those files will be filtered from the scan result if they have the same status as mentioned in the filename.
 
 Example: If you add `admin.php` into `db/403_blacklist.txt`, whenever you do a scan that `admin.php` returns 403, it will be filtered from the result.
 
-----
+---
+
 ### Filters
+
 Use **-i | --include-status** and **-x | --exclude-status** to select allowed and not allowed response status-codes
 
 For more advanced filters: **--exclude-sizes**, **--exclude-texts**, **--exclude-regexps**, **--exclude-redirects** and **--exclude-response**
@@ -504,8 +656,10 @@ python3 dirsearch.py -e php,html,js -u https://target --exclude-redirects "https
 python3 dirsearch.py -e php,html,js -u https://target --exclude-response /error.html
 ```
 
-----
+---
+
 ### Raw request
+
 dirsearch allows you to import the raw request from a file. The content would be something looked like this:
 
 ```http
@@ -517,8 +671,10 @@ Accept: */*
 
 Since there is no way for dirsearch to know what the URI scheme is, you need to set it using the `--scheme` flag. By default, dirsearch automatically detects the scheme.
 
-----
+---
+
 ### Wordlist formats
+
 Supported wordlist formats: uppercase, lowercase, capitalization
 
 #### Lowercase:
@@ -527,12 +683,14 @@ Supported wordlist formats: uppercase, lowercase, capitalization
 admin
 index.html
 ```
+
 #### Uppercase:
 
 ```
 ADMIN
 INDEX.HTML
 ```
+
 #### Capital:
 
 ```
@@ -540,8 +698,10 @@ Admin
 Index.html
 ```
 
-----
+---
+
 ### Exclude extensions
+
 Use **-X | --exclude-extensions** with an extension list will remove all paths in the wordlist that contains the given extensions
 
 `python3 dirsearch.py -u https://target -X jsp`
@@ -552,22 +712,27 @@ Wordlist:
 admin.php
 test.jsp
 ```
+
 After:
 
 ```
 admin.php
 ```
 
-----
+---
+
 ### Scan sub-directories
+
 - From an URL, you can scan a list of sub-directories with **--subdirs**.
 
 ```
 python3 dirsearch.py -e php,html,js -u https://target --subdirs /,admin/,folder/
 ```
 
-----
+---
+
 ### Proxies
+
 dirsearch supports SOCKS and HTTP proxy, with two options: a proxy server or a list of proxy servers.
 
 ```
@@ -582,9 +747,11 @@ python3 dirsearch.py -e php,html,js -u https://target --proxy socks5://10.10.0.1
 python3 dirsearch.py -e php,html,js -u https://target --proxylist proxyservers.txt
 ```
 
-----
+---
+
 ### Reports
-Supported report formats: **simple**, **plain**, **json**, **xml**, **md**, **csv**,  **html**, **sqlite**, **mysql**, **postgresql**
+
+Supported report formats: **simple**, **plain**, **json**, **xml**, **md**, **csv**, **html**, **sqlite**, **mysql**, **postgresql**
 
 ```
 python3 dirsearch.py -e php -l URLs.txt --format plain -o report.txt
@@ -594,8 +761,10 @@ python3 dirsearch.py -e php -l URLs.txt --format plain -o report.txt
 python3 dirsearch.py -e php -u https://target --format html -o target.json
 ```
 
-----
+---
+
 ### More example commands
+
 ```
 cat urls.txt | python3 dirsearch.py --stdin
 ```
@@ -614,10 +783,10 @@ python3 dirsearch.py -u https://target --header-list rate-limit-bypasses.txt
 
 **There are more to discover, try yourself!**
 
+## Support Docker
 
-Support Docker
----------------
 ### Install Docker Linux
+
 Install Docker
 
 ```sh
@@ -627,6 +796,7 @@ curl -fsSL https://get.docker.com | bash
 > To use docker you need superuser power
 
 ### Build Image dirsearch
+
 To create image
 
 ```sh
@@ -636,14 +806,15 @@ docker build -t "dirsearch:v0.4.3" .
 > **dirsearch** is the name of the image and **v0.4.3** is the version
 
 ### Using dirsearch
+
 For using
+
 ```sh
 docker run -it --rm "dirsearch:v0.4.3" -u target -e php,html,js,zip
 ```
 
+## References
 
-References
----------------
 - [Comprehensive Guide on Dirsearch](https://www.hackingarticles.in/comprehensive-guide-on-dirsearch/) by Shubham Sharma
 - [Comprehensive Guide on Dirsearch Part 2](https://www.hackingarticles.in/comprehensive-guide-on-dirsearch-part-2/) by Shubham Sharma
 - [How to Find Hidden Web Directories with Dirsearch](https://www.geeksforgeeks.org/how-to-find-hidden-web-directories-with-dirsearch/) by GeeksforGeeks
@@ -658,28 +829,25 @@ References
 - [Best Tools For Directory Bruteforcing](https://secnhack.in/multiple-ways-to-find-hidden-directory-on-web-server/) by Shubham Goyal
 - [Discover hidden files & directories on a webserver - dirsearch full tutorial](https://www.youtube.com/watch?v=jVxs5at0gxg) by CYBER BYTES
 
+## Tips
 
-Tips
----------------
 - The server has requests limit? That's bad, but feel free to bypass it, by randomizing proxy with `--proxy-list`
 - Want to find out config files or backups? Try `--suffixes ~` and `--prefixes .`
 - Want to find only folders/directories? Why not combine `--remove-extensions` and `--suffixes /`!
 - The mix of `--cidr`, `-F`, `-q` and will reduce most of noises + false negatives when brute-forcing with a CIDR
 - Scan a list of URLs, but don't want to see a 429 flood? `--skip-on-status 429` will help you to skip a target whenever it returns 429
-- The server contains large files that slow down the scan? You *might* want to use `HEAD` HTTP method instead of `GET`
+- The server contains large files that slow down the scan? You _might_ want to use `HEAD` HTTP method instead of `GET`
 - Brute-forcing CIDR is slow? Probably you forgot to reduce request timeout and request retries. Suggest: `--timeout 3 --retries 1`
 
+## Contribution
 
-Contribution
----------------
 We have been receiving a lot of helps from many people around the world to improve this tool. Thanks so much to everyone who have helped us so far!
 See [CONTRIBUTORS.md](https://github.com/maurosoria/dirsearch/blob/master/CONTRIBUTORS.md) to know who they are.
 
 #### Pull requests and feature requests are welcomed
 
+## License
 
-License
----------------
 Copyright (C) Mauro Soria (maurosoria@gmail.com)
 
 License: GNU General Public License, version 2

@@ -135,6 +135,11 @@ class BaseFuzzer:
 
         return False
 
+    def _record_elo_result(self, path: str, status_code: int, is_hit: bool) -> None:
+        """Record ELO result if ELO is enabled"""
+        # This will be implemented by subclasses if needed
+        pass
+
 
 class Fuzzer(BaseFuzzer):
     def __init__(
@@ -158,6 +163,11 @@ class Fuzzer(BaseFuzzer):
         self._play_event = threading.Event()
         self._quit_event = threading.Event()
         self._pause_semaphore = threading.Semaphore(0)
+
+    def _record_elo_result(self, word: str, status_code: int, is_hit: bool) -> None:
+        """Record ELO result if ELO is enabled"""
+        if options.get("elo_enabled") and self._dictionary.elo_manager:
+            self._dictionary.elo_manager.record_result(word, status_code, is_hit)
 
     def setup_scanners(self) -> None:
         # Default scanners (wildcard testers)
@@ -237,7 +247,7 @@ class Fuzzer(BaseFuzzer):
         self._quit_event.set()
         self.play()
 
-    def scan(self, path: str) -> None:
+    def scan(self, path: str, word: str = None) -> None:
         scanners = self.get_scanners_for(path)
         try:
             response = self._requester.request(path)
@@ -246,33 +256,43 @@ class Fuzzer(BaseFuzzer):
                 callback(e)
             return
 
+        # Track ELO data
+        is_hit = False
+
         if self.is_excluded(response):
             for callback in self.not_found_callbacks:
                 callback(response)
-            return
+        else:
+            # Check if response is not wildcard
+            is_valid = True
+            for tester in scanners:
+                if not tester.check(path, response):
+                    for callback in self.not_found_callbacks:
+                        callback(response)
+                    is_valid = False
+                    break
+            
+            if is_valid:
+                is_hit = True
+                if options["filter_threshold"]:
+                    hash_ = hash(response)
+                    self._hashes.setdefault(hash_, 0)
+                    self._hashes[hash_] += 1
 
-        for tester in scanners:
-            # Check if the response is unique, not wildcard
-            if not tester.check(path, response):
-                for callback in self.not_found_callbacks:
+                for callback in self.match_callbacks:
                     callback(response)
-                return
-
-        if options["filter_threshold"]:
-            hash_ = hash(response)
-            self._hashes.setdefault(hash_, 0)
-            self._hashes[hash_] += 1
-
-        for callback in self.match_callbacks:
-            callback(response)
+        
+        # Record ELO result
+        if word:
+            self._record_elo_result(word, response.status, is_hit)
 
     def thread_proc(self) -> None:
         logger.info(f'THREAD-{threading.get_ident()} started"')
 
         while True:
             try:
-                path = next(self._dictionary)
-                self.scan(self._base_path + path)
+                word = next(self._dictionary)
+                self.scan(self._base_path + word, word=word)
 
             except StopIteration:
                 break
@@ -312,6 +332,11 @@ class AsyncFuzzer(BaseFuzzer):
         )
         self._play_event = asyncio.Event()
         self._background_tasks = set()
+
+    def _record_elo_result(self, word: str, status_code: int, is_hit: bool) -> None:
+        """Record ELO result if ELO is enabled"""
+        if options.get("elo_enabled") and self._dictionary.elo_manager:
+            self._dictionary.elo_manager.record_result(word, status_code, is_hit)
 
     async def setup_scanners(self) -> None:
         # Default scanners (wildcard testers)
@@ -380,7 +405,7 @@ class AsyncFuzzer(BaseFuzzer):
         for task in self._background_tasks:
             task.cancel()
 
-    async def scan(self, path: str) -> None:
+    async def scan(self, path: str, word: str = None) -> None:
         scanners = self.get_scanners_for(path)
         try:
             response = await self._requester.request(path)
@@ -389,33 +414,43 @@ class AsyncFuzzer(BaseFuzzer):
                 callback(e)
             return
 
+        # Track ELO data
+        is_hit = False
+
         if self.is_excluded(response):
             for callback in self.not_found_callbacks:
                 callback(response)
-            return
+        else:
+            # Check if response is not wildcard
+            is_valid = True
+            for tester in scanners:
+                if not tester.check(path, response):
+                    for callback in self.not_found_callbacks:
+                        callback(response)
+                    is_valid = False
+                    break
+            
+            if is_valid:
+                is_hit = True
+                if options["filter_threshold"]:
+                    hash_ = hash(response)
+                    self._hashes.setdefault(hash_, 0)
+                    self._hashes[hash_] += 1
 
-        for tester in scanners:
-            # Check if the response is unique, not wildcard
-            if not tester.check(path, response):
-                for callback in self.not_found_callbacks:
+                for callback in self.match_callbacks:
                     callback(response)
-                return
-
-        if options["filter_threshold"]:
-            hash_ = hash(response)
-            self._hashes.setdefault(hash_, 0)
-            self._hashes[hash_] += 1
-
-        for callback in self.match_callbacks:
-            callback(response)
+        
+        # Record ELO result
+        if word:
+            self._record_elo_result(word, response.status, is_hit)
 
     async def task_proc(self) -> None:
         async with self.sem:
             await self._play_event.wait()
 
             try:
-                path = next(self._dictionary)
-                await self.scan(self._base_path + path)
+                word = next(self._dictionary)
+                await self.scan(self._base_path + word, word=word)
             except StopIteration:
                 pass
             finally:

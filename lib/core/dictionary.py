@@ -65,6 +65,23 @@ class Dictionary:
         # Items in self._extra will be cleared when self.reset() is called
         self._extra_index = 0
         self._extra = []
+        
+        # ELO integration
+        self.elo_manager = None
+        if options.get("elo_enabled") and kwargs.get("files"):
+            from lib.core.elo import EloManager
+            # Use the first wordlist file for ELO tracking
+            wordlist_file = kwargs["files"][0]
+            self.elo_manager = EloManager(wordlist_file)
+            
+            # Handle --elo-reset flag
+            if options.get("elo_reset"):
+                self.elo_manager.reset()
+                print(f"ELO file reset: {self.elo_manager.elo_file_path}")
+                exit(0)
+            
+            # Sort wordlist by ELO scores
+            self._items = self.elo_manager.sort_wordlist(self._items)
 
     @property
     def index(self) -> int:

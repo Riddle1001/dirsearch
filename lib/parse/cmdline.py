@@ -484,6 +484,27 @@ def parse_arguments() -> Values:
         help="Crawl for new paths in responses"
     )
 
+    # ELO Settings
+    elo = OptionGroup(parser, "ELO Settings")
+    elo.add_option(
+        "--elo",
+        action="store_true",
+        dest="elo_enabled",
+        help="Enable ELO rating system for adaptive wordlist ranking"
+    )
+    elo.add_option(
+        "--elo-list",
+        action="store_true",
+        dest="elo_list",
+        help="List all ELO files with full paths and exit"
+    )
+    elo.add_option(
+        "--elo-reset",
+        action="store_true",
+        dest="elo_reset",
+        help="Reset/clear ELO file for the specified wordlist"
+    )
+
     # View Settings
     view = OptionGroup(parser, "View Settings")
     view.add_option(
@@ -550,6 +571,7 @@ def parse_arguments() -> Values:
     parser.add_option_group(request)
     parser.add_option_group(connection)
     parser.add_option_group(advanced)
+    parser.add_option_group(elo)
     parser.add_option_group(view)
     parser.add_option_group(output)
     options, _ = parser.parse_args()

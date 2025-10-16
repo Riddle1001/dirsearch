@@ -38,6 +38,18 @@ from lib.parse.nmap import parse_nmap
 def parse_options() -> dict[str, Any]:
     opt = merge_config(parse_arguments())
 
+    # Handle ELO list command early
+    if opt.elo_list:
+        from lib.core.elo import EloManager
+        elo_files = EloManager.list_elo_files(opt.elo_directory)
+        if elo_files:
+            print("ELO files found:")
+            for elo_file in elo_files:
+                print(f"  {elo_file}")
+        else:
+            print(f"No ELO files found in: {opt.elo_directory}")
+        exit(0)
+
     if opt.session_file:
         return vars(opt)
 
@@ -393,6 +405,16 @@ def merge_config(opt: Values) -> Values:
 
     # Advanced
     opt.crawl = opt.crawl or config.safe_getboolean("advanced", "crawl")
+
+    # ELO
+    opt.elo_enabled = opt.elo_enabled or config.safe_getboolean("elo", "enabled")
+    opt.elo_directory = config.safe_get("elo", "elo-directory", ".")
+    opt.elo_initial = config.safe_getint("elo", "initial-elo", 1000)
+    opt.elo_hit_gain = config.safe_getint("elo", "hit-gain", 100)
+    opt.elo_miss_penalty = config.safe_getint("elo", "miss-penalty", 25)
+    opt.elo_time_decay_per_scan = config.safe_getfloat("elo", "time-decay-per-scan", 0.01)
+    opt.elo_suspicious_threshold = config.safe_getfloat("elo", "suspicious-threshold", 0.8)
+    opt.elo_rate_limit_threshold = config.safe_getint("elo", "rate-limit-threshold", 5)
 
     # View
     opt.full_url = opt.full_url or config.safe_getboolean("view", "full-url")
